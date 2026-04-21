@@ -1,8 +1,9 @@
 import axios from "axios";
-import { createContext, useState } from "react";
+import { createContext, useCallback, useState } from "react";
 import { toast } from "react-toastify";
 
 
+/* eslint-disable react-refresh/only-export-components */
 export const AdminContext = createContext()
 
 const AdminContextProvider = (props) => {
@@ -15,7 +16,7 @@ const AdminContextProvider = (props) => {
     const [dashData, setDashData] = useState(false)
 
 
-    const getAllDoctors = async () => {
+    const getAllDoctors = useCallback(async () => {
 
         try {
 
@@ -30,8 +31,8 @@ const AdminContextProvider = (props) => {
             toast.error(error.message)
         }
 
-    }
-    const changeAvailability = async (docId) => {
+    }, [backendUrl, aToken])
+    const changeAvailability = useCallback(async (docId) => {
         try {
 
             const { data } = await axios.post(backendUrl + '/api/admin/change-availability', { docId }, { headers: { aToken } })
@@ -46,10 +47,10 @@ const AdminContextProvider = (props) => {
             console.log(error)
             toast.error(error.message)
         }
-    }
+    }, [backendUrl, aToken, getAllDoctors])
 
     // Getting all appointment data from Database using API
-    const getAllAppointments = async () => {
+    const getAllAppointments = useCallback(async () => {
 
         try {
 
@@ -65,10 +66,10 @@ const AdminContextProvider = (props) => {
             console.log(error)
         }
 
-    }
+    }, [backendUrl, aToken])
 
     // Function to cancel appointment using API
-    const cancelAppointment = async (appointmentId) => {
+    const cancelAppointment = useCallback(async (appointmentId) => {
 
         try {
 
@@ -86,9 +87,9 @@ const AdminContextProvider = (props) => {
             console.log(error)
         }
 
-    }
+    }, [backendUrl, aToken, getAllAppointments])
     // Getting Admin Dashboard data from Database using API
-    const getDashData = async () => {
+    const getDashData = useCallback(async () => {
         try {
 
             const { data } = await axios.get(backendUrl + '/api/admin/dashboard', { headers: { aToken } })
@@ -104,7 +105,7 @@ const AdminContextProvider = (props) => {
             toast.error(error.message)
         }
 
-    }
+    }, [backendUrl, aToken])
 
     const value = {
         aToken, setAToken,

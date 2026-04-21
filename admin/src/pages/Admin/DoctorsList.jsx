@@ -9,7 +9,7 @@ const DoctorsList = () => {
     if (aToken) {
         getAllDoctors()
     }
-}, [aToken])
+}, [aToken, getAllDoctors])
 
   return (
     <div className='m-5 max-h-[90vh] overflow-y-scroll'>

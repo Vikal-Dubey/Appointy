@@ -1,4 +1,4 @@
-import React, { useContext, useEffect } from 'react'
+import React, { useContext } from 'react'
 import { DoctorContext } from './context/DoctorContext'
 import { AdminContext } from './context/AdminContext'
 import { Route, Routes, Navigate, useLocation } from 'react-router-dom'

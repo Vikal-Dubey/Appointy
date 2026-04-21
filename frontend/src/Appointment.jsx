@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useCallback, useContext, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { AppContext } from './context/AppContext'
 import { assets } from './assets/assets'
@@ -17,15 +17,15 @@ const Appointment = () => {
   const [slotIndex, setSlotIndex] = useState(0)
   const [slotTime, setSlotTime] = useState('')
 
-  const fetchDocInfo = async () => {
+  const fetchDocInfo = useCallback(async () => {
     const doc = doctors.find((doc) => doc._id === docId)
     if (doc) {
       // Ensure slots_booked is always at least an empty object
       setDocInfo({ ...doc, slots_booked: doc.slots_booked || {} })
     }
-  }
+  }, [doctors, docId])
 
-  const getAvailableSlots = () => {
+  const getAvailableSlots = useCallback(() => {
     if (!docInfo) return
     setDocSlots([])
 
@@ -76,7 +76,7 @@ const Appointment = () => {
 
       setDocSlots((prev) => [...prev, timeSlots])
     }
-  }
+  }, [docInfo])
 
   const bookAppointment = async () => {
 
@@ -115,13 +115,13 @@ const Appointment = () => {
     if (doctors.length > 0) {
       fetchDocInfo()
     }
-  }, [doctors, docId])
+  }, [doctors, docId, fetchDocInfo])
 
   useEffect(() => {
     if (docInfo) {
       getAvailableSlots()
     }
-  }, [docInfo])
+  }, [docInfo, getAvailableSlots])
 
   return (
     docInfo && (

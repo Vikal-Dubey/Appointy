@@ -11,9 +11,21 @@ const loginAdmin = async (req, res) => {
     try {
 
         const { email, password } = req.body
+        const cleanEmail = email?.trim().toLowerCase()
+        const cleanPassword = password?.trim()
+        const envAdminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase()
+        const envAdminPassword = process.env.ADMIN_PASSWORD?.trim()
 
-        if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
-            const token = jwt.sign(email + password, process.env.JWT_SECRET)
+        if (!cleanEmail || !cleanPassword) {
+            return res.json({ success: false, message: "Email and password are required" })
+        }
+
+        if (!envAdminEmail || !envAdminPassword || !process.env.JWT_SECRET) {
+            return res.json({ success: false, message: "Admin credentials are not configured on server" })
+        }
+
+        if (cleanEmail === envAdminEmail && cleanPassword === envAdminPassword) {
+            const token = jwt.sign(cleanEmail + cleanPassword, process.env.JWT_SECRET)
             res.json({ success: true, token })
         } else {
             res.json({ success: false, message: "Invalid credentials" })
@@ -36,12 +48,28 @@ const addDoctor = async (req, res) => {
       return res.status(400).json({ success: false, message: "Missing Details" });
     }
 
+    if (!imageFile) {
+      return res.status(400).json({ success: false, message: "Doctor image is required" });
+    }
+
     if (!validator.isEmail(email)) {
       return res.status(400).json({ success: false, message: "Please enter a valid email" });
     }
 
     if (password.length < 8) {
       return res.status(400).json({ success: false, message: "Please enter a strong password" });
+    }
+
+    const existingDoctor = await doctorModel.findOne({ email: email.trim().toLowerCase() });
+    if (existingDoctor) {
+      return res.status(400).json({ success: false, message: "Doctor with this email already exists" });
+    }
+
+    let parsedAddress;
+    try {
+      parsedAddress = JSON.parse(address);
+    } catch {
+      return res.status(400).json({ success: false, message: "Invalid address data" });
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -51,8 +79,8 @@ const addDoctor = async (req, res) => {
     const imageUrl = imageUpload.secure_url;
 
     const doctorData = {
-      name,
-      email,
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
       image: imageUrl,
       password: hashedPassword,
       speciality,
@@ -60,7 +88,7 @@ const addDoctor = async (req, res) => {
       experience,
       about,
       fees,
-      address: JSON.parse(address),
+      address: parsedAddress,
       date: Date.now()
     };
 

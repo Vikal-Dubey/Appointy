@@ -9,6 +9,7 @@ const Navbar = () => {
   const { aToken, setAToken } = useContext(AdminContext)
   const navigate = useNavigate()
   const location = useLocation()
+  const userPanelUrl = import.meta.env.VITE_USER_PANEL_URL || 'http://localhost:5173'
 
   const logout = () => {
     navigate('/')
@@ -19,7 +20,7 @@ const Navbar = () => {
   }
 
   const goToUserPanel = () => {
-    window.location.href = 'https://appointy-roan.vercel.app/'
+    window.location.href = userPanelUrl
   }
 
   const isOnDashboard =

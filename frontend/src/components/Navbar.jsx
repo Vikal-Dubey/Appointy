@@ -8,6 +8,7 @@ const Navbar = () => {
   const location = useLocation()
   const [showMenu, setShowMenu] = useState(false)
   const { token, setToken, userData } = useContext(AppContext)
+  const adminPanelUrl = import.meta.env.VITE_ADMIN_PANEL_URL || 'http://localhost:5174'
 
   const logout = () => {
     localStorage.removeItem('token')
@@ -46,7 +47,7 @@ const Navbar = () => {
         {/* ✅ Admin Panel Button - show only on home page  */}
         {location.pathname === '/' && (
           <button
-            onClick={() => window.open('https://appointy-six.vercel.app', '_blank')}
+            onClick={() => window.location.href = adminPanelUrl}
             className='bg-primary text-white text-xs px-4 py-2 rounded-full hover:bg-gray-700 hidden md:block'
           >
             Admin Panel

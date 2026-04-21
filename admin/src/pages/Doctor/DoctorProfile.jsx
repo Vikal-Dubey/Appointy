@@ -44,7 +44,7 @@ const DoctorProfile = () => {
         if (dToken) {
             getProfileData()
         }
-    }, [dToken])
+    }, [dToken, getProfileData])
 
     return profileData && (
         <div>

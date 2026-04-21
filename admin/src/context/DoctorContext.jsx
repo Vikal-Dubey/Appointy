@@ -1,7 +1,8 @@
-import { createContext, useState } from "react";
+import { createContext, useCallback, useMemo, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 
+/* eslint-disable react-refresh/only-export-components */
 export const DoctorContext = createContext();
 
 const DoctorContextProvider = (props) => {
@@ -14,13 +15,13 @@ const DoctorContextProvider = (props) => {
   const [dashData, setDashData] = useState(false);
   const [profileData, setProfileData] = useState(false);
 
-  const authHeader = {
+  const authHeader = useMemo(() => ({
     headers: {
       Authorization: `Bearer ${dToken}`,
     },
-  };
+  }), [dToken]);
 
-  const getAppointments = async () => {
+  const getAppointments = useCallback(async () => {
     try {
       const { data } = await axios.get(
         backendUrl + "/api/doctor/appointments",
@@ -36,9 +37,28 @@ const DoctorContextProvider = (props) => {
       console.error(error);
       toast.error(error.message);
     }
-  };
+  }, [backendUrl, authHeader]);
 
-  const completeAppointment = async (appointmentId) => {
+  const getDashData = useCallback(async () => {
+    try {
+      const { data } = await axios.get(
+        backendUrl + "/api/doctor/dashboard",
+        authHeader
+      );
+
+      if (data.success) {
+        setDashData(data.dashData);
+        console.log(data.dashData);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error(error.message);
+    }
+  }, [backendUrl, authHeader]);
+
+  const completeAppointment = useCallback(async (appointmentId) => {
     try {
       const { data } = await axios.post(
         backendUrl + "/api/doctor/complete-appointment",
@@ -57,9 +77,9 @@ const DoctorContextProvider = (props) => {
       console.error(error);
       toast.error(error.message);
     }
-  };
+  }, [backendUrl, authHeader, getAppointments, getDashData]);
 
-  const cancelAppointment = async (appointmentId) => {
+  const cancelAppointment = useCallback(async (appointmentId) => {
     try {
       const { data } = await axios.post(
         backendUrl + "/api/doctor/cancel-appointment",
@@ -78,28 +98,9 @@ const DoctorContextProvider = (props) => {
       console.error(error);
       toast.error(error.message);
     }
-  };
+  }, [backendUrl, authHeader, getAppointments, getDashData]);
 
-  const getDashData = async () => {
-    try {
-      const { data } = await axios.get(
-        backendUrl + "/api/doctor/dashboard",
-        authHeader
-      );
-
-      if (data.success) {
-        setDashData(data.dashData);
-        console.log(data.dashData);
-      } else {
-        toast.error(data.message);
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error(error.message);
-    }
-  };
-
-  const getProfileData = async () => {
+  const getProfileData = useCallback(async () => {
     try {
       const { data } = await axios.get(
         backendUrl + "/api/doctor/profile",
@@ -116,7 +117,7 @@ const DoctorContextProvider = (props) => {
       console.error(error);
       toast.error(error.message);
     }
-  };
+  }, [backendUrl, authHeader]);
 
   const value = {
     dToken,

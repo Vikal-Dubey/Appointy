@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useCallback, useContext, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AppContext } from '../context/AppContext'
 import axios from 'axios'
@@ -20,7 +20,7 @@ const MyAppointments = () => {
   }
 
   // Getting User Appointments Data Using API
-  const getUserAppointments = async () => {
+  const getUserAppointments = useCallback(async () => {
     try {
 
       const { data } = await axios.get(backendUrl + '/api/user/appointments', { headers: { token } })
@@ -30,7 +30,7 @@ const MyAppointments = () => {
       console.log(error)
       toast.error(error.message)
     }
-  }
+  }, [backendUrl, token])
 
   // Function to cancel appointment Using API
   const cancelAppointment = async (appointmentId) => {
@@ -54,9 +54,14 @@ const MyAppointments = () => {
 
   }
 
-  const initPay = (order) => {
+  const initPay = (order, razorpayKey) => {
+    if (!razorpayKey) {
+      toast.error("Razorpay key is missing. Please check payment configuration.")
+      return
+    }
+
     const options = {
-      key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+      key: razorpayKey,
       amount: order.amount,
       currency: order.currency,
       name: 'Appointment Payment',
@@ -88,7 +93,7 @@ const MyAppointments = () => {
     try {
       const { data } = await axios.post(backendUrl + '/api/user/payment-razorpay', { appointmentId }, { headers: { token } })
       if (data.success) {
-        initPay(data.order)
+        initPay(data.order, data.key_id || import.meta.env.VITE_RAZORPAY_KEY_ID)
       } else {
         toast.error(data.message)
       }
@@ -102,7 +107,7 @@ const MyAppointments = () => {
     if (token) {
       getUserAppointments()
     }
-  }, [token])
+  }, [token, getUserAppointments])
 
   // Generate appointment data from doctors
   useEffect(() => {
@@ -124,12 +129,6 @@ const MyAppointments = () => {
       setAppointments(generatedAppointments)
     }
   }, [doctors])
-
-
-
-  const simulateStripe = () => toast.info("Redirecting to Stripe...")
-  const simulateRazorpay = () => toast.info("Opening Razorpay...")
-
   return (
     <div>
       <p className='pb-3 mt-12 text-lg font-medium text-gray-600 border-b'>My appointments</p>

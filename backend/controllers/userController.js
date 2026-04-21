@@ -14,34 +14,45 @@ const registerUser = async (req, res) => {
 
     try {
         const { name, email, password } = req.body;
+        const cleanName = name?.trim()
+        const cleanEmail = email?.trim().toLowerCase()
+        const cleanPassword = password?.trim()
 
         // checking for all data to register user
-        if (!name || !email || !password) {
+        if (!cleanName || !cleanEmail || !cleanPassword) {
             return res.json({ success: false, message: 'Missing Details' })
         }
 
         // validating email format
-        if (!validator.isEmail(email)) {
+        if (!validator.isEmail(cleanEmail)) {
             return res.json({ success: false, message: "Please enter a valid email" })
         }
 
         // validating strong password
-        if (password.length < 8) {
+        if (cleanPassword.length < 8) {
             return res.json({ success: false, message: "Please enter a strong password" })
+        }
+
+        const existingUser = await userModel.findOne({ email: cleanEmail })
+        if (existingUser) {
+            return res.json({ success: false, message: "Account already exists with this email" })
         }
 
         // hashing user password
         const salt = await bcrypt.genSalt(10); // the more no. round the more time it will take
-        const hashedPassword = await bcrypt.hash(password, salt)
+        const hashedPassword = await bcrypt.hash(cleanPassword, salt)
 
         const userData = {
-            name,
-            email,
+            name: cleanName,
+            email: cleanEmail,
             password: hashedPassword,
         }
 
         const newUser = new userModel(userData)
         const user = await newUser.save()
+        if (!process.env.JWT_SECRET) {
+            return res.json({ success: false, message: "Server configuration error: missing JWT secret" })
+        }
         const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET)
 
         res.json({ success: true, token })
@@ -57,13 +68,20 @@ const loginUser = async (req, res) => {
 
     try {
         const { email, password } = req.body;
-        const user = await userModel.findOne({ email })
+        const cleanEmail = email?.trim().toLowerCase()
+        const cleanPassword = password?.trim()
+
+        if (!cleanEmail || !cleanPassword) {
+            return res.json({ success: false, message: "Email and password are required" })
+        }
+
+        const user = await userModel.findOne({ email: cleanEmail })
 
         if (!user) {
             return res.json({ success: false, message: "User does not exist" })
         }
 
-        const isMatch = await bcrypt.compare(password, user.password)
+        const isMatch = await bcrypt.compare(cleanPassword, user.password)
 
         if (isMatch) {
             const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET)
@@ -255,7 +273,11 @@ const paymentRazorpay = async (req, res) => {
         // creation of an order
         const order = await razorpayInstance.orders.create(options)
 
-        res.json({ success: true, order })
+        res.json({
+            success: true,
+            order,
+            key_id: process.env.RAZORPAY_KEY_ID
+        })
 
     } catch (error) {
         console.log(error)
