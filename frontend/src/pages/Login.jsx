@@ -18,7 +18,7 @@ const Login = () => {
   const onSubmitHandler = async (event) => {
     event.preventDefault();
     if (loginType === 'Admin') {
-      window.location.href = import.meta.env.VITE_ADMIN_URL || 'http://localhost:5174'
+      window.location.href = import.meta.env.VITE_ADMIN_PANEL_URL || 'http://localhost:5174'
       return
     }
     try{
