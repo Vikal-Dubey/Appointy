@@ -3,25 +3,38 @@ import jwt from 'jsonwebtoken';
 // Doctor authentication middleware
 const authDoctor = async (req, res, next) => {
     try {
-        // Check for token in Authorization header
-        const authHeader = req.headers.authorization || req.headers.dtoken;
+        const authHeader = req.headers.authorization
+        const dtoken = req.headers.dtoken
+        const tokenHeader = req.headers.token
 
-        if (!authHeader) {
-            return res.status(401).json({ success: false, message: 'Authorization token missing' });
+        let token = null
+
+        if (authHeader?.startsWith('Bearer ')) {
+            token = authHeader.split(' ')[1]
+        } else if (authHeader) {
+            token = authHeader
+        } else if (dtoken) {
+            token = dtoken
+        } else if (tokenHeader) {
+            token = tokenHeader
         }
 
-        // Extract token from 'Bearer <token>' format or use directly if passed via custom header
-        const token = authHeader.startsWith('Bearer ')
-            ? authHeader.split(' ')[1]
-            : authHeader;
+        if (!token) {
+            return res.json({ success: false, message: 'Authorization token missing' })
+        }
 
-        // Verify token and attach user info to req
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = { id: decoded.id };
-        next();
+        const decoded = jwt.verify(token, process.env.JWT_SECRET)
+        const docId = decoded.id?.toString()
+
+        if (!docId) {
+            return res.json({ success: false, message: 'Invalid or expired token' })
+        }
+
+        req.user = { id: docId }
+        next()
     } catch (error) {
-        console.error('Auth Error:', error.message);
-        res.status(401).json({ success: false, message: 'Invalid or expired token' });
+        console.error('Auth Error:', error.message)
+        return res.json({ success: false, message: 'Invalid or expired token' })
     }
 };
 

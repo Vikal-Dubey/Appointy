@@ -16,6 +16,7 @@ const Appointment = () => {
   const [docSlots, setDocSlots] = useState([])
   const [slotIndex, setSlotIndex] = useState(0)
   const [slotTime, setSlotTime] = useState('')
+  const [isBooking, setIsBooking] = useState(false)
 
   const fetchDocInfo = useCallback(async () => {
     const doc = doctors.find((doc) => doc._id === docId)
@@ -85,7 +86,20 @@ const Appointment = () => {
       return navigate('/login')
     }
 
-    const date = docSlots[slotIndex][0].datetime
+    if (!slotTime) {
+      toast.warning('Please select a time slot')
+      return
+    }
+
+    if (isBooking) return
+
+    const selectedDaySlots = docSlots[slotIndex]
+    if (!selectedDaySlots?.length) {
+      toast.warning('No slots available for the selected day')
+      return
+    }
+
+    const date = selectedDaySlots[0].datetime
   
     let day = date.getDate()
     let month = date.getMonth() + 1
@@ -93,20 +107,69 @@ const Appointment = () => {
 
     const slotDate = day + "_" + month + "_" + year
 
+    setIsBooking(true)
+
     try {
 
       const { data } = await axios.post(backendUrl + '/api/user/book-appointment', { docId, slotDate, slotTime }, { headers: { token } })
-      if (data.success) {
-        toast.success(data.message)
-        getDoctorsData()
-        navigate('/my-appointments')
-      } else {
+
+      if (!data.success) {
         toast.error(data.message)
+        setIsBooking(false)
+        return
       }
+
+      const { order, key_id } = data
+
+      if (!key_id) {
+        toast.error('Razorpay key is missing. Please check payment configuration.')
+        setIsBooking(false)
+        return
+      }
+
+      const options = {
+        key: key_id,
+        amount: order.amount,
+        currency: order.currency,
+        name: 'Appointment Booking',
+        description: '20% Confirmation Deposit',
+        order_id: order.id,
+        handler: async (response) => {
+          try {
+            const { data: verifyData } = await axios.post(backendUrl + '/api/user/verifyRazorpay', response, { headers: { token } })
+            if (verifyData.success) {
+              toast.success('Appointment Booked Successfully')
+              getDoctorsData()
+              navigate('/my-appointments')
+            } else {
+              toast.error(verifyData.message)
+            }
+          } catch (error) {
+            console.log(error)
+            toast.error(error.message)
+          } finally {
+            setIsBooking(false)
+          }
+        },
+        modal: {
+          ondismiss: function () {
+            setIsBooking(false)
+            toast.info('Payment cancelled. Your slot was not reserved.')
+          }
+        }
+      }
+
+      const rzp = new window.Razorpay(options)
+      rzp.on('payment.failed', function () {
+        setIsBooking(false)
+        toast.error('Payment failed. Please try again.')
+      })
+      rzp.open()
 
     } catch (error) {
       console.log(error)
       toast.error(error.message)
+      setIsBooking(false)
     }
 
   }
@@ -147,6 +210,9 @@ const Appointment = () => {
             </div>
             <p className='text-gray-600 font-medium mt-4'>
               Appointment fee: <span className='text-gray-800'>{currencySymbol} {docInfo.fees}</span>
+            </p>
+            <p className='text-sm text-gray-500 mt-1'>
+              20% confirmation deposit ({currencySymbol}{Math.round(docInfo.fees * 0.2)}) required to book. Remaining 80% due at the clinic.
             </p>
           </div>
         </div>
@@ -192,9 +258,10 @@ const Appointment = () => {
           {/* Book Button */}
           <button
             onClick={bookAppointment}
-            className='bg-primary text-white text-sm font-light px-20 py-3 rounded-full my-6'
+            disabled={isBooking}
+            className='bg-primary text-white text-sm font-light px-20 py-3 rounded-full my-6 disabled:opacity-60'
           >
-            Book an appointment
+            {isBooking ? 'Processing...' : 'Book an appointment'}
           </button>
         </div>
 

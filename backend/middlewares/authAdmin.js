@@ -3,7 +3,9 @@ import jwt from "jsonwebtoken"
 // admin authentication middleware
 const authAdmin = async (req, res, next) => {
     try {
-        const { atoken } = req.headers
+        // Express lowercases header keys; accept aToken from client as atoken
+        const atoken = req.headers.atoken || req.headers['atoken']
+
         if (!atoken) {
             return res.json({ success: false, message: 'Not Authorized Login Again' })
         }
@@ -19,11 +21,12 @@ const authAdmin = async (req, res, next) => {
         if (token_decode !== adminEmail + adminPassword) {
             return res.json({ success: false, message: 'Not Authorized Login Again' })
         }
+
         next()
     } catch (error) {
         console.log(error)
-        res.json({ success: false, message: error.message })
+        return res.json({ success: false, message: 'Not Authorized Login Again' })
     }
 }
 
-export default authAdmin;
+export default authAdmin

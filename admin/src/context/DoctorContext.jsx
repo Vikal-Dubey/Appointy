@@ -6,7 +6,7 @@ import { toast } from "react-toastify";
 export const DoctorContext = createContext();
 
 const DoctorContextProvider = (props) => {
-  const backendUrl = import.meta.env.VITE_BACKEND_URL;
+  const backendUrl = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000').replace(/\/$/, '');
 
   const [dToken, setDToken] = useState(
     localStorage.getItem("dToken") || ""
@@ -48,7 +48,6 @@ const DoctorContextProvider = (props) => {
 
       if (data.success) {
         setDashData(data.dashData);
-        console.log(data.dashData);
       } else {
         toast.error(data.message);
       }
@@ -108,8 +107,10 @@ const DoctorContextProvider = (props) => {
       );
 
       if (data.success) {
-        setProfileData(data.profileData);
-        console.log(data.profileData);
+        setProfileData({
+          ...data.profileData,
+          address: data.profileData.address || { line1: '', line2: '' },
+        });
       } else {
         toast.error(data.message);
       }
@@ -123,6 +124,7 @@ const DoctorContextProvider = (props) => {
     dToken,
     setDToken,
     backendUrl,
+    authHeader,
     getAppointments,
     appointments,
     setAppointments,

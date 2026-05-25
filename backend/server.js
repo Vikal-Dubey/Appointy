@@ -12,13 +12,23 @@ import userRouter from './routes/userRoute.js'
 const app = express()
 const port = process.env.PORT || 4000
 
+const allowedOrigins = [
+    process.env.PATIENT_APP_URL,
+    process.env.ADMIN_APP_URL,
+    'http://localhost:5173',
+    'http://localhost:5174',
+].filter(Boolean)
+
 // Connect to database (CALL THE FUNCTION)
 connectDB()
 connectCloudinary()
 
 // middlewares
 app.use(express.json())
-app.use(cors())
+app.use(cors({
+    origin: allowedOrigins.length ? allowedOrigins : true,
+    credentials: true,
+}))
 
 // api endpoints
 app.use('/api/admin', adminRouter)

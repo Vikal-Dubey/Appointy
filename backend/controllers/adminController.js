@@ -52,7 +52,9 @@ const addDoctor = async (req, res) => {
       return res.status(400).json({ success: false, message: "Doctor image is required" });
     }
 
-    if (!validator.isEmail(email)) {
+    const cleanEmail = email.trim().toLowerCase()
+
+    if (!validator.isEmail(cleanEmail)) {
       return res.status(400).json({ success: false, message: "Please enter a valid email" });
     }
 
@@ -60,15 +62,24 @@ const addDoctor = async (req, res) => {
       return res.status(400).json({ success: false, message: "Please enter a strong password" });
     }
 
-    const existingDoctor = await doctorModel.findOne({ email: email.trim().toLowerCase() });
+    const parsedFees = Number(fees)
+    if (!Number.isFinite(parsedFees) || parsedFees <= 0) {
+      return res.status(400).json({ success: false, message: "Please enter a valid fee amount" });
+    }
+
+    const existingDoctor = await doctorModel.findOne({ email: cleanEmail });
     if (existingDoctor) {
       return res.status(400).json({ success: false, message: "Doctor with this email already exists" });
     }
 
     let parsedAddress;
     try {
-      parsedAddress = JSON.parse(address);
+      parsedAddress = typeof address === 'string' ? JSON.parse(address) : address;
     } catch {
+      return res.status(400).json({ success: false, message: "Invalid address data" });
+    }
+
+    if (!parsedAddress?.line1 || !parsedAddress?.line2) {
       return res.status(400).json({ success: false, message: "Invalid address data" });
     }
 
@@ -80,14 +91,14 @@ const addDoctor = async (req, res) => {
 
     const doctorData = {
       name: name.trim(),
-      email: email.trim().toLowerCase(),
+      email: cleanEmail,
       image: imageUrl,
       password: hashedPassword,
       speciality,
       degree,
       experience,
       about,
-      fees,
+      fees: parsedFees,
       address: parsedAddress,
       date: Date.now()
     };
@@ -108,21 +119,31 @@ const appointmentCancel = async (req, res) => {
     try {
 
         const { appointmentId } = req.body
+
+        if (!appointmentId) {
+            return res.json({ success: false, message: 'Appointment ID is required' })
+        }
+
         const appointmentData = await appointmentModel.findById(appointmentId)
 
-        
+        if (!appointmentData) {
+            return res.json({ success: false, message: 'Appointment not found' })
+        }
+
         await appointmentModel.findByIdAndUpdate(appointmentId, { cancelled: true })
 
-        // releasing doctor slot 
-        const { docId, slotDate, slotTime } = appointmentData
+        // releasing doctor slot only if deposit was paid and slot was locked
+        if (appointmentData.payment) {
+            const { docId, slotDate, slotTime } = appointmentData
 
-        const doctorData = await doctorModel.findById(docId)
+            const doctorData = await doctorModel.findById(docId)
 
-        let slots_booked = doctorData.slots_booked
-
-        slots_booked[slotDate] = slots_booked[slotDate].filter(e => e !== slotTime)
-
-        await doctorModel.findByIdAndUpdate(docId, { slots_booked })
+            if (doctorData?.slots_booked?.[slotDate]) {
+                let slots_booked = doctorData.slots_booked
+                slots_booked[slotDate] = slots_booked[slotDate].filter(e => e !== slotTime)
+                await doctorModel.findByIdAndUpdate(docId, { slots_booked })
+            }
+        }
 
         res.json({ success: true, message: 'Appointment Cancelled' })
 
@@ -164,13 +185,13 @@ const adminDashboard = async (req, res) => {
 
         const doctors = await doctorModel.find({})
         const users = await userModel.find({})
-        const appointments = await appointmentModel.find({})
+        const appointments = await appointmentModel.find({ payment: true })
 
         const dashData = {
             doctors: doctors.length,
             appointments: appointments.length,
             patients: users.length,
-            latestAppointments: appointments.reverse().slice(0,5)
+            latestAppointments: [...appointments].reverse().slice(0,5)
         }
 
         res.json({ success: true, dashData })

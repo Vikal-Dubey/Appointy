@@ -6,7 +6,7 @@ import axios from 'axios'
 
 const DoctorProfile = () => {
 
-    const { dToken, profileData, setProfileData, getProfileData, backendUrl } = useContext(DoctorContext)
+    const { dToken, profileData, setProfileData, getProfileData, backendUrl, authHeader } = useContext(DoctorContext)
     const { currency} = useContext(AppContext)
     const [isEdit, setIsEdit] = useState(false)
 
@@ -16,12 +16,12 @@ const DoctorProfile = () => {
 
             const updateData = {
                 address: profileData.address,
-                fees: profileData.fees,
+                fees: Number(profileData.fees),
                 about: profileData.about,
                 available: profileData.available
             }
 
-            const { data } = await axios.post(backendUrl + '/api/doctor/update-profile', updateData, { headers: { dToken } })
+            const { data } = await axios.post(backendUrl + '/api/doctor/update-profile', updateData, authHeader)
 
             if (data.success) {
                 toast.success(data.message)
@@ -31,10 +31,8 @@ const DoctorProfile = () => {
                 toast.error(data.message)
             }
 
-            setIsEdit(false)
-
         } catch (error) {
-            toast.error(error.message)
+            toast.error(error?.response?.data?.message || error.message)
             console.log(error)
         }
 
@@ -69,7 +67,7 @@ const DoctorProfile = () => {
                         <p className='text-sm text-gray-600 max-w-[700px] mt-1'>
                             {
                                 isEdit
-                                    ? <textarea onChange={(e) => setProfileData(prev => ({ ...prev, about: e.target.value }))} type='text' className='w-full outline-primary p-2' rows={8} value={profileData.about} />
+                                    ? <textarea onChange={(e) => setProfileData(prev => ({ ...prev, about: e.target.value }))} className='w-full outline-primary p-2' rows={8} value={profileData.about || ''} />
                                     : profileData.about
                             }
                         </p>
@@ -82,21 +80,21 @@ const DoctorProfile = () => {
                     <div className='flex gap-2 py-2'>
                         <p>Address:</p>
                         <p className='text-sm'>
-                            {isEdit ? <input type='text' onChange={(e) => setProfileData(prev => ({ ...prev, address: { ...prev.address, line1: e.target.value } }))} value={profileData.address.line1} /> : profileData.address.line1}
+                            {isEdit ? <input type='text' onChange={(e) => setProfileData(prev => ({ ...prev, address: { ...(prev.address || {}), line1: e.target.value } }))} value={profileData.address?.line1 || ''} /> : profileData.address?.line1}
                             <br />
-                            {isEdit ? <input type='text' onChange={(e) => setProfileData(prev => ({ ...prev, address: { ...prev.address, line2: e.target.value } }))} value={profileData.address.line2} /> : profileData.address.line2}
+                            {isEdit ? <input type='text' onChange={(e) => setProfileData(prev => ({ ...prev, address: { ...(prev.address || {}), line2: e.target.value } }))} value={profileData.address?.line2 || ''} /> : profileData.address?.line2}
                         </p>
                     </div>
 
                     <div className='flex gap-1 pt-2'>
-                        <input type="checkbox" onChange={() => isEdit && setProfileData(prev => ({ ...prev, available: !prev.available }))} checked={profileData.available} />
+                        <input type="checkbox" disabled={!isEdit} onChange={() => isEdit && setProfileData(prev => ({ ...prev, available: !prev.available }))} checked={!!profileData.available} />
                         <label htmlFor="">Available</label>
                     </div>
 
                     {
                         isEdit
                             ? <button onClick={updateProfile} className='px-4 py-1 border border-primary text-sm rounded-full mt-5 hover:bg-primary hover:text-white transition-all'>Save</button>
-                            : <button onClick={() => setIsEdit(prev => !prev)} className='px-4 py-1 border border-primary text-sm rounded-full mt-5 hover:bg-primary hover:text-white transition-all'>Edit</button>
+                            : <button onClick={() => setIsEdit(true)} className='px-4 py-1 border border-primary text-sm rounded-full mt-5 hover:bg-primary hover:text-white transition-all'>Edit</button>
                     }
 
                 </div>
